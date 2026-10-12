@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="tl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⏰ Schedule Reminder</title>
+    <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiU2NoZWR1bGUgUmVtaW5kZXIiLCJzaG9ydF9uYW1lIjoiU2NoZWR1bGUgUmVtaW5kZXIiLCJzdGFydF91cmwiOiIuLyIsImRpc3BsYXkiOiJzdGFuZGFsb25lIiwiYmFja2dyb3VuZF9jb2xvciI6IiNmZmZmZmYiLCJ0aGVtZV9jb2xvciI6IiMzNzlhZjYiLCJpY29ucyI6W3sic3JjIjoiZGF0YTppbWFnZS9zdmcreG1sLDxzdmcgeG1sbnM9J2h0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnJyB2aWV3Qm94PScwIDAgMTAwIDEwMCc+PGNpcmNsZSBjeD0nNTAnIGN5PSc1MCcgcj0nNDUnIGZpbGw9JyUzQzM3OWFmNiclLz48dGV4dCB4PSc1MCcgeT0nNTUnIGRvbWluYW50LWJhc2VsaW5lPSctaWRkbGUnIHRleHQtYW5jaG9yPSctaWRkbGUnIGZpbGw9J3doaXRlJyBmb250LXNpemU9JzQwJyBmaWxsLXdlaWdodD0nb2xkZW4nPvCfkqg8L3RleHQ+PC9zdmc+In1dfQ==">
+    <meta name="theme-color" content="#379af6">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', sans-serif;
+        }
+        body {
+            background: linear-gradient(135deg, #379af6, #7b68ee);
+            min-height: 100vh;
+            padding: 16px;
+        }
+        .container {
+            max-width: 520px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: white;
+            text-align: center;
+            font-size: 22px;
+            margin-bottom: 15px;
+        }
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        .card h2 {
+            font-size: 17px;
+            color: #379af6;
+            margin-bottom: 12px;
+        }
+        input, select, button {
+            width: 100%;
+            padding: 12px;
+            margin: 6px 0;
+            border: 2px solid #e8e8e8;
+            border-radius: 10px;
+            font-size: 15px;
+        }
+        button {
+            background: #379af6;
+            color: white;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        button:hover { background: #257ed6; }
+        button:disabled { background: #ccc; }
+        .btn-green { background: #28c76f; }
+        .btn-green:hover { background: #20a85c; }
+        .btn-red { background: #ea5455; padding: 6px 10px; width: auto; font-size: 13px; }
+        .btn-red:hover { background: #d44445; }
+        
+        .days { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 15px; }
+        .day-tab {
+            flex: 1; min-width: 55px; padding: 8px 6px;
+            background: #f0f0f0; border-radius: 8px; text-align: center;
+            font-size: 14px; cursor: pointer;
+        }
+        .day-tab.active { background: #379af6; color: white; }
+        
+        .class-item {
+            padding: 14px; background: #f0f7ff;
+            border-left: 4px solid #379af6; border-radius: 8px;
+            margin-bottom: 10px; position: relative;
+        }
+        .class-item .time { font-weight: bold; color: #379af6; }
+        .class-item .subj { font-size: 16px; margin: 4px 0; }
+        .class-item .room { font-size: 13px; color: #666; }
+        .empty { text-align: center; color: #999; padding: 20px; }
+        
+        .status { font-size: 13px; margin-top: 8px; }
+        .on { color: #28c76f; }
+        .off { color: #ea5455; }
+        
+        #alarmModal {
+            display: none; position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%; background: rgba(0,0,0,0.6);
+            z-index: 9999; align-items: center; justify-content: center;
+        }
+        .modal-content {
+            background: white; padding: 30px 25px; border-radius: 20px;
+            text-align: center; max-width: 320px;
+        }
+        .modal-content h3 { font-size: 22px; color: #379af6; margin-bottom: 10px; }
+        .modal-content p { font-size: 16px; margin-bottom: 20px; color: #444; }
+        
+        #installBar {
+            position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+            background: white; padding: 14px 20px; border-radius: 12px;
+            box-shadow: 0 4px 25px rgba(0,0,0,0.2); z-index: 998;
+            max-width: 92%; display: none; align-items: center; gap: 12px;
+        }
+        #installBar button { width: auto; margin: 0; padding: 8px 16px; }
+    </style>
+</head>
+<body>
+
+<audio id="alarmSound" preload="auto">
+    <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YI4CAAAzHxZFo1eEtt3EISiaAKhQP/+/vJQAA==" type="audio/wav">
+
+
+<div class="container">
+    <h1>⏰ Schedule Reminder</h1>
+
+    <div class="card">
+        <h2>🔔 Reminder Settings</h2>
+        <p class="status" id="notifStatus">● Notifications: <span class="off">OFF</span></p>
+        <button onclick="requestPermission()">🔔 Enable Notifications</button>
+        <select id="reminderMin">
+            <option value="0">At class time</option>
+            <option value="5">5 minutes before</option>
+            <option value="10" selected>10 minutes before</option>
+            <option value="15">15 minutes before</option>
+            <option value="30">30 minutes before</option>
+        </select>
+    </div>
+
+    <div class="card">
+        <h2>➕ Add Class</h2>
+        <select id="selDay">
+            <option>Monday</option><option>Tuesday</option><option>Wednesday</option>
+            <option>Thursday</option><option>Friday</option><option>Saturday</option>
+        </select>
+        <input type="text" id="subj" placeholder="Subject Name">
+        <input type="time" id="time">
+        <input type="text" id="room" placeholder="Room / Building">
+        <button class="btn-green" onclick="addClass()">💾 Save Class</button>
+    </div>
+
+    <div class="card">
+        <h2>📋 My Schedule</h2>
+        <div class="days">
+            <span class="day-tab active" onclick="switchDay('Monday')">Mon</span>
+            <span class="day-tab" onclick="switchDay('Tuesday')">Tue</span>
+            <span class="day-tab" onclick="switchDay('Wednesday')">Wed</span>
+            <span class="day-tab" onclick="switchDay('Thursday')">Thu</span>
+            <span class="day-tab" onclick="switchDay('Friday')">Fri</span>
+            <span class="day-tab" onclick="switchDay('Saturday')">Sat</span>
+        </div>
+        <div id="scheduleArea"></div>
+        <div class="empty" id="emptyMsg">No classes yet. Add one above!</div>
+    </div>
+    
+    <div class="card">
+        <button class="btn-red" style="width:100%" onclick="if(confirm('Delete ALL schedule?')){localStorage.removeItem('classSchedule');localStorage.removeItem('notifiedClasses');renderSchedule();}">🗑️ Clear All Schedule</button>
+    </div>
+</div>
+
+<div id="alarmModal">
+    <div class="modal-content">
+        <h3 id="alarmTitle">⏰ CLASS TIME!</h3>
+        <p id="alarmMessage"></p>
+        <button onclick="dismissAlarm()">Got it! ✅</button>
+    </div>
+</div>
+
+<div id="installBar">
+    <span>📱 Install sa Home Screen?</span>
+    <button onclick="doInstall()">Install</button>
+    <button style="background:#eee; color:#444" onclick="hideInstall()">✕</button>
+</div>
+
+<script>
+let currentDay = 'Monday';
+let schedule = JSON.parse(localStorage.getItem('classSchedule')) || {};
+let notified = JSON.parse(localStorage.getItem('notifiedClasses')) || {};
+let checkInterval;
+let deferredPrompt;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    document.getElementById('installBar').style.display = 'flex';
+});
+async function doInstall() {
+    document.getElementById('installBar').style.display = 'none';
+    if (deferredPrompt) { deferredPrompt.prompt(); deferredPrompt = null; }
+}
+function hideInstall() { document.getElementById('installBar').style.display = 'none'; }
+
+async function requestPermission() {
+    if (!('Notification' in window)) { alert('Notifications not supported'); return; }
+    const perm = await Notification.requestPermission();
+    if (perm === 'granted') {
+        document.getElementById('notifStatus').innerHTML = '● Notifications: <span class="on">ON ✅</span>';
+        startScheduler();
+    } else {
+        document.getElementById('notifStatus').innerHTML = '● Notifications: <span class="off">DENIED ❌</span>';
+    }
+}
+
+function getTodayName() {
+    const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    return days[new Date().getDay()];
+}
+
+function parseTime(t) { const [h,m] = t.split(':').map(Number); return {h,m}; }
+
+function showAlarm(subj, time, room) {
+    const modal = document.getElementById('alarmModal');
+    document.getElementById('alarmMessage').innerHTML = 
+        `<strong>${subj}</strong><br>${time}<br>${room || ''}`;
+    modal.style.display = 'flex';
+    document.getElementById('alarmSound').play();
+    if (Notification.permission === 'granted') {
+        new Notification('⏰ CLASS TIME!', {
+            body: `${subj} — ${time} ${room || ''}`,
+            icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg"><text y="50" font-size="40">⏰</text></svg>',
+            tag: 'class-alarm'
+        });
+    }
+}
+
+function dismissAlarm() {
+    document.getElementById('alarmModal').style.display = 'none';
+    document.getElementById('alarmSound').pause();
+    document.getElementById('alarmSound').currentTime = 0;
+}
+
+function startScheduler() {
+    if (checkInterval) return;
+    checkInterval = setInterval(checkSchedule, 30000);
+}
+
+function checkSchedule() {
+    const today = getTodayName();
+    const now = new Date();
+    const currentH = now.getHours();
+    const currentM = now.getMinutes();
+    const remMin = parseInt(document.getElementById('reminderMin').value);
+    const todayClasses = schedule[today] || [];
+    
+    todayClasses.forEach((cls, idx) => {
+        const t = parseTime(cls.time);
+        const triggerMins = t.h * 60 + t.m - remMin;
+        const currentTotal = currentH * 60 + currentM;
+        const key = `${today}-${idx}-${cls.time}`;
+        
+        if (currentTotal === triggerMins && !notified[key]) {
+            notified[key] = true;
+            localStorage.setItem('notifiedClasses', JSON.stringify(notified));
+            showAlarm(cls.subject, cls.time, cls.room);
+        }
+    });
+}
+
+function addClass() {
+    const day = document.getElementById('selDay').value;
+    const subj = document.getElementById('subj').value.trim();
+    const time = document.getElementById('time').value;
+    const room = document.getElementById('room').value.trim();
+    
+    if (!subj || !time) { alert('Ilagay ang Subject at Time pre!'); return; }
+    
+    if (!schedule[day]) schedule[day] = [];
+    schedule[day].push({ subject: subj, time: time, room: room });
+    localStorage.setItem('classSchedule', JSON.stringify(schedule));
+    renderSchedule();
+    
+    document.getElementById('subj').value = '';
+    document.getElementById('time').value = '';
+    document.getElementById('room').value = '';
+}
+
+function deleteClass(idx) {
+    schedule[currentDay].splice(idx, 1);
+    localStorage.setItem('classSchedule', JSON.stringify(schedule));
+    renderSchedule();
+}
+
+function switchDay(day) {
+    currentDay = day;
+    document.querySelectorAll('.day-tab').forEach(t => t.classList.remove('active'));
+    event.target.classList.add('active');
+    renderSchedule();
+}
+
+function renderSchedule() {
+    const area = document.getElementById('scheduleArea');
+    const empty = document.getElementById('emptyMsg');
+    const classes = schedule[currentDay] || [];
+    
+    if (classes.length === 0) {
+        area.innerHTML = '';
+        empty.style.display = 'block';
+        return;
+    }
+    
+    empty.style.display = 'none';
+    area.innerHTML = classes.map((c, i) => `
+        <div class="class-item">
+            <button class="btn-red" style="float:right" onclick="deleteClass(${i})">✕</button>
+            <div class="time">${c.time}</div>
+            <div class="subj">${c.subject}</div>
+            <div class="room">${c.room}</div>
+        </div>
+    `).join('');
+}
+
+renderSchedule();
+</script>
+
+</body>
+</html>
